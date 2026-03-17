@@ -45,6 +45,12 @@ export default function NewListing() {
             Discover
           </Link>
           <Link
+            href="/calendar"
+            className="hidden sm:inline-flex items-center rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-zinc-100 hover:bg-white/10 transition"
+          >
+            Calendar
+          </Link>
+          <Link
             href="/listings/new"
             className="inline-flex items-center rounded-full bg-blue-500 px-3 py-1.5 text-xs font-medium text-white shadow-sm shadow-blue-500/40 hover:bg-blue-400 transition"
           >

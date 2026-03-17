@@ -1,7 +1,54 @@
 import { NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
 
-// In production we could run the Python script or call an external scraper.
-// Here we fetch event-like results from a public HTML search (DuckDuckGo) so it works on Vercel.
+// Prefer events from our local JSON "DB" if present.
+function readEventsFromDb(query, location) {
+  try {
+    const filePath = path.join(process.cwd(), "data", "events.json");
+    if (!fs.existsSync(filePath)) return null;
+    const raw = fs.readFileSync(filePath, "utf8");
+    const parsed = JSON.parse(raw || "{}");
+    let events = Array.isArray(parsed.events) ? parsed.events : [];
+
+    if (!events.length) return null;
+
+    const q = (query || "").toLowerCase();
+    const loc = (location || "").toLowerCase();
+
+    events = events.filter((e) => {
+      const title = (e.title || "").toLowerCase();
+      const desc = (e.description || "").toLowerCase();
+      const city = (e.city || "").toLowerCase();
+      const matchesQuery =
+        !q || title.includes(q) || desc.includes(q) || (e.category || "").toLowerCase().includes(q);
+      const matchesLocation = !loc || city.includes(loc) || desc.includes(loc) || title.includes(loc);
+      return matchesQuery && matchesLocation;
+    });
+
+    // Sort by date when available, otherwise keep order.
+    events.sort((a, b) => {
+      const da = a.date || a.dateISO;
+      const db = b.date || b.dateISO;
+      if (!da && !db) return 0;
+      if (!da) return 1;
+      if (!db) return -1;
+      return new Date(da) - new Date(db);
+    });
+
+    if (!events.length) return null;
+
+    return {
+      events,
+      query: [query, "events", location].filter(Boolean).join(" "),
+      source: "db",
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Fallback: fetch event-like results from a public HTML search (DuckDuckGo) so it works on Vercel.
 async function fetchScrapedEvents(query, location) {
   const q = [query, "events", location].filter(Boolean).join(" ");
   const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`;
@@ -49,7 +96,33 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("query") || "activities";
   const location = searchParams.get("location") || "";
+
+  // 1) Try local DB first (populated by Python BeautifulSoup scraper).
+  const dbResult = readEventsFromDb(query, location);
+  if (dbResult) {
+    return NextResponse.json({
+      events: dbResult.events.map((e, i) => ({
+        id: e.id || `db-${i}`,
+        source: "db",
+        ...e,
+      })),
+      query: dbResult.query,
+      usedDb: true,
+    });
+  }
+
+  // 2) Fallback to on-demand HTML search scraping for environments without the Python job.
   let events = await fetchScrapedEvents(query, location);
-  if (events.length === 0) events = FALLBACK_EVENTS.map((e, i) => ({ ...e, id: `fallback-${i}`, category: query }));
-  return NextResponse.json({ events, query: [query, "events", location].filter(Boolean).join(" ") });
+  if (events.length === 0) {
+    events = FALLBACK_EVENTS.map((e, i) => ({
+      ...e,
+      id: `fallback-${i}`,
+      category: query,
+    }));
+  }
+  return NextResponse.json({
+    events,
+    query: [query, "events", location].filter(Boolean).join(" "),
+    usedDb: false,
+  });
 }
