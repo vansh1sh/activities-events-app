@@ -1,36 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Activities & Events
 
-## Getting Started
+Discover activities and events based on your preferences (location, interests) and list your own (e.g. Tennis – looking for players, Concert – extra tickets).
 
-First, run the development server:
+## Features
+
+- **Preferences**: Set location and interests on the home page.
+- **Discover**: Events from web search (scraped) plus community listings.
+- **Create listing**: Post activities or events (tennis, concert, sports, hiking, other) with optional description and contact.
+
+## Run locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## Python scraper (optional)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+To run the Python scraper and get JSON for the same format:
 
-## Learn More
+```bash
+pip install -r scripts/requirements-scrape.txt
+python scripts/scrape_events.py "tennis" --location "San Francisco"
+```
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Output is JSON with an `events` array. The Next.js app uses a Node-based fetcher in production (Vercel) so no Python runtime is required on deploy.
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Push to GitHub and connect the repo in [Vercel](https://vercel.com). The app will build and deploy. User listings are stored in memory (resets on cold start); for persistence add Vercel KV or a database.
